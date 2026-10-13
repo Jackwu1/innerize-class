@@ -1,7 +1,9 @@
 package com.github.hcsp.polymorphism;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class User {
     /** 用户ID，数据库主键，全局唯一 */
@@ -26,9 +28,29 @@ public class User {
     // 这里使用了一个NameCollector类，请尝试将它改写成匿名内部类
     // 使得代码更加集中，更加容易阅读
     public static List<String> collectNames(List<User> users) {
-        NameCollector collector = new NameCollector();
-        users.forEach(collector);
-        return collector.getNames();
+        // Object接收匿名内部类实例，不向上转型为Consumer
+        Object collectorObj = new Consumer<User>() {
+            private final List<String> names = new ArrayList<>();
+
+            @Override
+            public void accept(User user) {
+                names.add(user.getName());
+            }
+
+            public List<String> getNames() {
+                return names;
+            }
+        };
+
+        // 传给forEach的时候向下强转为Consumer
+        users.forEach((Consumer<User>) collectorObj);
+
+        // 反射调用getNames()，绕开编译期类型检查！
+        try {
+            return (List<String>) collectorObj.getClass().getDeclaredMethod("getNames").invoke(collectorObj);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static void main(String[] args) {
